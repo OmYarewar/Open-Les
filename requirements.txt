@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pydantic
+openai
+httpx
+pywebview
+jinja2
+python-dotenv
+sqlmodel
