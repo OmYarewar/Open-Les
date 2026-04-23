@@ -1,3 +1,7 @@
 ## 2024-05-24 - Unnecessary API Client Recreation Anti-Pattern
 **Learning:** Recreating the `AsyncOpenAI` client on every request (which was done to easily handle potential configuration changes) implicitly destroys the underlying `httpx` HTTP connection pool. This forces a new DNS lookup, TCP connection, and TLS handshake on every single chat invocation, adding huge latency (around ~375ms vs ~3ms in our mock benchmark).
 **Action:** When an API client configuration might change dynamically, implement an explicit caching/memoization layer that tracks the configuration state and only recreates the client when the configuration *actually* changes. Never instantiate high-level HTTP-based clients unconditionally inside hot paths.
+
+## 2026-04-23 - Lucide Icons Global Scanning Performance Issue
+**Learning:** In the AI Harness frontend, `lucide.createIcons()` scans the entire DOM for `data-lucide` attributes by default. Calling this globally (`lucide.createIcons();`) on frequent DOM updates like appending chat messages causes severe O(N^2) scaling issues, blocking the main thread and resulting in significant lag when dealing with hundreds of messages.
+**Action:** When injecting new UI elements containing Lucide icons, always scope the icon replacement exclusively to the newly added nodes using the `{ root: targetElement }` configuration option (e.g. `lucide.createIcons({ root: wrapper });`).
