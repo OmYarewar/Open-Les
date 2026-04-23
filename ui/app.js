@@ -181,7 +181,7 @@ function appendMessage(role, content, id = null) {
     }
     
     chatMessages.appendChild(wrapper);
-    lucide.createIcons();
+    lucide.createIcons({ root: wrapper });
     scrollToBottom();
 }
 
