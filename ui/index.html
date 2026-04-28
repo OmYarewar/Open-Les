@@ -33,6 +33,15 @@
             <i data-lucide="cpu"></i> AI Harness
         </div>
         <div class="flex items-center gap-4">
+            <div class="relative flex items-center gap-1 bg-slate-800/50 rounded-md px-2 py-1.5 border border-dark-border">
+                <select id="config-switcher" class="bg-transparent text-sm text-slate-300 focus:outline-none appearance-none pr-4 cursor-pointer max-w-[150px] truncate">
+                    <option value="">Loading...</option>
+                </select>
+                <i data-lucide="chevron-down" class="w-3 h-3 text-slate-500 absolute right-2 pointer-events-none"></i>
+                <button id="btn-add-config" class="ml-1 p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors" title="Add New API Config">
+                    <i data-lucide="plus" class="w-3 h-3"></i>
+                </button>
+            </div>
             <button id="btn-sudo" class="p-2 bg-red-600/20 hover:bg-red-600/40 rounded-md transition-all hover:scale-105 active:scale-95 text-red-400 font-semibold text-sm flex gap-2 items-center" title="Sudo Access">
                 <i data-lucide="shield"></i> Sudo
             </button>
@@ -80,9 +89,18 @@
             <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-dark-bg via-dark-bg to-transparent">
                 <form id="chat-form" class="max-w-4xl mx-auto relative bg-dark-panel border border-dark-border rounded-xl shadow-lg focus-within:border-indigo-500 transition-colors">
                     <textarea id="chat-input" rows="1" class="w-full bg-transparent text-white p-4 pr-12 focus:outline-none resize-none max-h-32 rounded-xl" placeholder="Send a message..." required></textarea>
-                    <button type="submit" class="absolute bottom-3 right-3 p-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white transition-colors disabled:opacity-50">
-                        <i data-lucide="send" class="w-4 h-4"></i>
-                    </button>
+                    <div class="absolute bottom-3 right-3 flex items-center gap-2">
+                        <!-- Status Indicator -->
+                        <div id="ai-status-indicator" class="hidden text-xs text-indigo-400 font-medium animate-pulse flex items-center gap-1 mr-2">
+                            <i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i> <span id="ai-status-text">Thinking...</span>
+                        </div>
+                        <button type="button" id="btn-stop-chat" class="hidden p-1.5 bg-red-600 hover:bg-red-500 rounded-lg text-white transition-colors" title="Stop Generation">
+                            <i data-lucide="square" class="w-4 h-4 fill-current"></i>
+                        </button>
+                        <button type="submit" id="btn-send-chat" class="p-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white transition-colors disabled:opacity-50">
+                            <i data-lucide="send" class="w-4 h-4"></i>
+                        </button>
+                    </div>
                 </form>
             </div>
         </section>
@@ -102,6 +120,37 @@
             </div>
             <div class="p-4 border-t border-dark-border flex justify-end gap-2">
                 <button id="btn-save-sudo" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded transition-colors">Grant Sudo Access</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add API Config Modal -->
+    <div id="add-config-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-dark-panel border border-dark-border rounded-xl shadow-2xl w-full max-w-md mx-4 flex flex-col">
+            <div class="flex items-center justify-between p-4 border-b border-dark-border">
+                <h2 class="text-lg font-semibold flex items-center gap-2 text-indigo-400"><i data-lucide="plus-circle"></i> Add API Configuration</h2>
+                <button id="btn-close-add-config" class="text-slate-400 hover:text-white"><i data-lucide="x"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-400 mb-1">Nickname / Label</label>
+                    <input type="text" id="new-config-label" class="w-full bg-slate-800 border border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="e.g. OpenAI GPT-4, Local LMStudio">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-400 mb-1">API Key</label>
+                    <input type="password" id="new-config-api-key" class="w-full bg-slate-800 border border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="sk-...">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-400 mb-1">Base URL</label>
+                    <input type="text" id="new-config-base-url" class="w-full bg-slate-800 border border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="https://api.openai.com/v1" value="https://api.openai.com/v1">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-400 mb-1">Model ID</label>
+                    <input type="text" id="new-config-model" class="w-full bg-slate-800 border border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="gpt-4o-mini" value="gpt-4o-mini">
+                </div>
+            </div>
+            <div class="p-4 border-t border-dark-border flex justify-end gap-2">
+                <button id="btn-save-new-config" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded transition-colors">Save Configuration</button>
             </div>
         </div>
     </div>

@@ -169,6 +169,74 @@ def install_skill(zip_filepath: str) -> str:
     except Exception as e:
         return f"Error installing skill: {e}"
 
+def web_search(query: str) -> str:
+    """Searches the web using DuckDuckGo."""
+    try:
+        from ddgs import DDGS
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=5))
+            if not results:
+                return "No results found."
+            output = ""
+            for i, res in enumerate(results):
+                output += f"{i+1}. {res['title']}\nURL: {res['href']}\nSnippet: {res['body']}\n\n"
+            return output
+    except Exception as e:
+        return f"Error during web search: {e}"
+
+def fetch_url(url: str) -> str:
+    """Fetches the content of a URL as plain text."""
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        if "localhost" in url or "127.0.0.1" in url:
+            return "Error: Accessing localhost is blocked for safety."
+
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Remove script and style elements
+        for script in soup(["script", "style"]):
+            script.extract()
+
+        text = soup.get_text()
+        lines = (line.strip() for line in text.splitlines())
+        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+        text = '\n'.join(chunk for chunk in chunks if chunk)
+
+        return text[:4000] + ("\n...[content truncated]" if len(text) > 4000 else "")
+    except Exception as e:
+        return f"Error fetching URL: {e}"
+
+def extract_web_content(url: str, css_selector: str) -> str:
+    """Fetches a URL and extracts content matching a CSS selector."""
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        if "localhost" in url or "127.0.0.1" in url:
+            return "Error: Accessing localhost is blocked for safety."
+
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+        elements = soup.select(css_selector)
+
+        if not elements:
+            return f"No elements found matching selector '{css_selector}'."
+
+        output = ""
+        for i, el in enumerate(elements[:10]):
+            output += f"--- Match {i+1} ---\n{el.get_text(strip=True)}\n\n"
+
+        return output[:4000] + ("\n...[content truncated]" if len(output) > 4000 else "")
+    except Exception as e:
+        return f"Error extracting content: {e}"
+
 AVAILABLE_TOOLS = {
     "read_file": read_file,
     "write_file": write_file,
@@ -178,7 +246,10 @@ AVAILABLE_TOOLS = {
     "get_recent_ai_papers": get_recent_ai_papers,
     "benchmark_performance": benchmark_performance,
     "heal_system": heal_system,
-    "install_skill": install_skill
+    "install_skill": install_skill,
+    "web_search": web_search,
+    "fetch_url": fetch_url,
+    "extract_web_content": extract_web_content
 }
 
 TOOLS_SCHEMA = [
@@ -294,6 +365,49 @@ TOOLS_SCHEMA = [
                     "zip_filepath": {"type": "string", "description": "The path to the .zip file to install"}
                 },
                 "required": ["zip_filepath"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "web_search",
+            "description": "Searches the web using DuckDuckGo to find information.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "The search query."}
+                },
+                "required": ["query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "fetch_url",
+            "description": "Fetches the full text content of a given URL. Useful for reading documentation or articles.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "The URL to fetch."}
+                },
+                "required": ["url"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "extract_web_content",
+            "description": "Fetches a URL and extracts text content from specific HTML elements matching a CSS selector.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "The URL to fetch."},
+                    "css_selector": {"type": "string", "description": "The CSS selector to match elements."}
+                },
+                "required": ["url", "css_selector"]
             }
         }
     }

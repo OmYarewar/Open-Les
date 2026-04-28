@@ -1,15 +1,17 @@
+
 from fastapi import FastAPI, Request, Body, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from typing import List, Optional
 import os
 import json
 import asyncio
 import zipfile
 import shutil
 
-from .config import config
+from .config import config, ApiConfig
 from .memory import memory
 from .agent import agent
 from .mcp_manager import mcp_manager
@@ -49,6 +51,16 @@ async def chat_endpoint(request: ChatRequest):
             yield f"data: {json.dumps(chunk)}\n\n"
     return StreamingResponse(generate(), media_type="text/event-stream")
 
+@app.post("/api/chat/stop")
+async def chat_stop_endpoint(request: Request):
+    data = await request.json()
+    session_id = data.get("session_id")
+    if session_id:
+        session = memory.get_session(session_id)
+        session.is_cancelled = True
+        memory.save_session(session_id)
+        return {"status": "ok", "message": "Session marked for cancellation"}
+    raise HTTPException(status_code=400, detail="session_id required")
 
 @app.get("/api/sessions")
 async def get_sessions():
@@ -64,7 +76,8 @@ async def get_sessions():
         sessions.append({
             "id": session_id,
             "title": title,
-            "message_count": len(session.messages)
+            "message_count": len(session.messages),
+            "config_id": session.config_id
         })
     # Sort descending by id assuming id has timestamp
     sessions.sort(key=lambda x: x["id"], reverse=True)
@@ -72,7 +85,11 @@ async def get_sessions():
 
 @app.get("/api/sessions/{session_id}")
 async def get_session(session_id: str):
-    return {"history": memory.get_history(session_id)}
+    session = memory.get_session(session_id)
+    return {
+        "history": memory.get_history(session_id),
+        "config_id": session.config_id
+    }
 
 class ConfigUpdate(BaseModel):
     api_key: str
@@ -85,10 +102,20 @@ class ConfigUpdate(BaseModel):
 
 @app.get("/api/config")
 async def get_config():
-    return config.model_dump()
+    # Return backwards compatible config representation
+    return {
+        "api_key": config.api_key,
+        "base_url": config.base_url,
+        "model": config.model,
+        "system_prompt": config.system_prompt,
+        "mcp_config_str": config.mcp_config_str,
+        "skills_config_str": config.skills_config_str,
+        "workspace_dir": config.workspace_dir
+    }
 
 @app.post("/api/config")
 async def update_config(update: ConfigUpdate):
+    # This edits the active config or creates a default if none exists
     config.api_key = update.api_key
     config.base_url = update.base_url
     config.model = update.model
@@ -102,6 +129,70 @@ async def update_config(update: ConfigUpdate):
         asyncio.create_task(mcp_manager.reload_config(config.mcp_config_str))
 
     # Persist the configuration changes
+    config.save_config()
+
+    return {"status": "ok"}
+
+# Multi-API Config endpoints
+@app.get("/api/configs")
+async def get_configs():
+    safe_configs = []
+    for c in config.configs:
+        masked_key = ""
+        if c.api_key:
+            if len(c.api_key) > 8:
+                masked_key = c.api_key[:4] + "..." + c.api_key[-4:]
+            else:
+                masked_key = "***"
+
+        safe_configs.append({
+            "id": c.id,
+            "label": c.label,
+            "api_key_masked": masked_key,
+            "base_url": c.base_url,
+            "model": c.model
+        })
+
+    return {
+        "configs": safe_configs,
+        "active_config_id": config.active_config_id
+    }
+
+class AddApiConfig(BaseModel):
+    label: str
+    api_key: str
+    base_url: str
+    model: str
+
+@app.post("/api/configs/add")
+async def add_api_config(new_config: AddApiConfig):
+    api_config = ApiConfig(
+        label=new_config.label,
+        api_key=new_config.api_key,
+        base_url=new_config.base_url,
+        model=new_config.model
+    )
+    config.configs.append(api_config)
+    config.save_config()
+    return {"status": "ok", "id": api_config.id}
+
+class SwitchApiConfig(BaseModel):
+    config_id: str
+    session_id: Optional[str] = None
+
+@app.post("/api/configs/switch")
+async def switch_api_config(request: SwitchApiConfig):
+    if not config.get_config_by_id(request.config_id):
+        raise HTTPException(status_code=404, detail="Configuration not found")
+
+    # If session_id is provided, switch it for the session
+    if request.session_id:
+        session = memory.get_session(request.session_id)
+        session.config_id = request.config_id
+        memory.save_session(request.session_id)
+
+    # Also set it as the global active config
+    config.active_config_id = request.config_id
     config.save_config()
 
     return {"status": "ok"}

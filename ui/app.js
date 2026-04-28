@@ -11,6 +11,110 @@ const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
 const btnNewChat = document.getElementById('btn-new-chat');
 
+// API Config logic
+const configSwitcher = document.getElementById('config-switcher');
+const btnAddConfig = document.getElementById('btn-add-config');
+const addConfigModal = document.getElementById('add-config-modal');
+const btnCloseAddConfig = document.getElementById('btn-close-add-config');
+const btnSaveNewConfig = document.getElementById('btn-save-new-config');
+const btnStopChat = document.getElementById('btn-stop-chat');
+const btnSendChat = document.getElementById('btn-send-chat');
+const aiStatusIndicator = document.getElementById('ai-status-indicator');
+const aiStatusText = document.getElementById('ai-status-text');
+
+async function loadConfigs() {
+    try {
+        const res = await fetch('/api/configs');
+        const data = await res.json();
+
+        configSwitcher.innerHTML = '';
+        data.configs.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.label;
+            configSwitcher.appendChild(opt);
+        });
+
+        if (data.active_config_id) {
+            configSwitcher.value = data.active_config_id;
+        }
+    } catch (e) {
+        console.error("Failed to load configs:", e);
+    }
+}
+
+configSwitcher.addEventListener('change', async (e) => {
+    await fetch('/api/configs/switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            config_id: e.target.value,
+            session_id: currentSessionId
+        })
+    });
+});
+
+btnAddConfig.addEventListener('click', () => {
+    addConfigModal.classList.remove('hidden');
+    addConfigModal.classList.add('flex');
+});
+
+btnCloseAddConfig.addEventListener('click', () => {
+    addConfigModal.classList.add('hidden');
+    addConfigModal.classList.remove('flex');
+});
+
+btnSaveNewConfig.addEventListener('click', async () => {
+    const label = document.getElementById('new-config-label').value || 'New Config';
+    const apiKey = document.getElementById('new-config-api-key').value;
+    const baseUrl = document.getElementById('new-config-base-url').value;
+    const model = document.getElementById('new-config-model').value;
+
+    if (!apiKey) {
+        alert("API Key is required");
+        return;
+    }
+
+    btnSaveNewConfig.textContent = 'Saving...';
+
+    const res = await fetch('/api/configs/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label, api_key: apiKey, base_url: baseUrl, model })
+    });
+
+    const data = await res.json();
+
+    if (data.status === 'ok') {
+        await loadConfigs();
+        configSwitcher.value = data.id; // select the newly created config
+        // Also tell server to switch to it
+        configSwitcher.dispatchEvent(new Event('change'));
+
+        btnCloseAddConfig.click();
+
+        // Reset inputs
+        document.getElementById('new-config-label').value = '';
+        document.getElementById('new-config-api-key').value = '';
+    }
+
+    btnSaveNewConfig.textContent = 'Save Configuration';
+});
+
+btnStopChat.addEventListener('click', async () => {
+    if (isGenerating) {
+        await fetch('/api/chat/stop', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: currentSessionId })
+        });
+        aiStatusText.textContent = "Stopping...";
+    }
+});
+
+// Load configs on startup
+loadConfigs();
+
 // Throttled scroll to bottom
 let scrollTicking = false;
 function scrollToBottom() {
@@ -95,6 +199,11 @@ chatForm.addEventListener('submit', async (e) => {
     
     isGenerating = true;
     chatInput.disabled = true;
+    btnSendChat.classList.add('hidden');
+    btnStopChat.classList.remove('hidden');
+    aiStatusIndicator.classList.remove('hidden');
+    aiStatusIndicator.classList.add('flex');
+    aiStatusText.textContent = "Thinking...";
 
     try {
         const response = await fetch('/api/chat', {
@@ -355,6 +464,10 @@ async function loadSession(sessionId) {
     try {
         const res = await fetch(`/api/sessions/${sessionId}`);
         const data = await res.json();
+
+        if (data.config_id) {
+            configSwitcher.value = data.config_id;
+        }
 
         if (data.history && data.history.length > 0) {
             // Skip the system prompt which is typically first

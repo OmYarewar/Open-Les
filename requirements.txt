@@ -11,3 +11,5 @@ mcp
 beautifulsoup4
 psutil
 python-multipart
+requests
+ddgs
