@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+
+from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 import json
 import os
@@ -13,6 +14,8 @@ class Message(BaseModel):
 class Session(BaseModel):
     session_id: str
     messages: List[Message] = []
+    config_id: Optional[str] = None
+    is_cancelled: bool = False
 
 class MemoryManager:
     def __init__(self, storage_dir: str = "data/sessions"):
