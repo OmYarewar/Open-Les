@@ -15,6 +15,7 @@ class Session(BaseModel):
     session_id: str
     messages: List[Message] = []
     config_id: Optional[str] = None
+    model_id: Optional[str] = None
     is_cancelled: bool = False
 
 class MemoryManager:

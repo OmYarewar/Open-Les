@@ -32,6 +32,42 @@ async def startup_event():
     # Load default MCP configuration
     asyncio.create_task(mcp_manager.reload_config(config.mcp_config_str))
 
+    # Download default skills if they don't exist
+    import urllib.request
+    from .tools import install_skill
+
+    skills_dir = os.path.join(config.workspace_dir, "skills")
+
+    def download_and_install_skill(url, folder_name, zip_name):
+        target_dir = os.path.join(skills_dir, folder_name)
+        if not os.path.exists(target_dir):
+            try:
+                print(f"Downloading {zip_name} from {url}...")
+                zip_path = os.path.join(config.workspace_dir, zip_name)
+                urllib.request.urlretrieve(url, zip_path)
+                print(f"Extracting {zip_name}...")
+                install_skill(zip_path)
+                os.remove(zip_path)
+                print(f"Successfully installed {folder_name}")
+            except Exception as e:
+                print(f"Failed to download/install {folder_name}: {e}")
+
+    # Start downloads in a background thread to avoid blocking startup
+    def init_skills():
+        download_and_install_skill(
+            "https://github.com/LeoYeAI/openclaw-master-skills/archive/refs/heads/main.zip",
+            "openclaw-master-skills-main",
+            "openclaw-master-skills.zip"
+        )
+        download_and_install_skill(
+            "https://github.com/obra/superpowers/archive/refs/heads/main.zip",
+            "superpowers-main",
+            "superpowers.zip"
+        )
+
+    import threading
+    threading.Thread(target=init_skills, daemon=True).start()
+
 @app.get("/", response_class=HTMLResponse)
 async def read_index(request: Request):
     return templates.TemplateResponse(request=request, name="index.html", context={"request": request})
@@ -88,13 +124,14 @@ async def get_session(session_id: str):
     session = memory.get_session(session_id)
     return {
         "history": memory.get_history(session_id),
-        "config_id": session.config_id
+        "config_id": session.config_id,
+        "model_id": session.model_id
     }
 
 class ConfigUpdate(BaseModel):
     api_key: str
     base_url: str
-    model: str
+    models: str
     system_prompt: str
     mcp_config_str: str
     skills_config_str: str
@@ -106,7 +143,7 @@ async def get_config():
     return {
         "api_key": config.api_key,
         "base_url": config.base_url,
-        "model": config.model,
+        "models": config.models,
         "system_prompt": config.system_prompt,
         "mcp_config_str": config.mcp_config_str,
         "skills_config_str": config.skills_config_str,
@@ -118,7 +155,7 @@ async def update_config(update: ConfigUpdate):
     # This edits the active config or creates a default if none exists
     config.api_key = update.api_key
     config.base_url = update.base_url
-    config.model = update.model
+    config.models = update.models
     config.system_prompt = update.system_prompt
     config.workspace_dir = update.workspace_dir
     config.skills_config_str = update.skills_config_str
@@ -150,7 +187,7 @@ async def get_configs():
             "label": c.label,
             "api_key_masked": masked_key,
             "base_url": c.base_url,
-            "model": c.model
+            "models": c.models
         })
 
     return {
@@ -162,7 +199,7 @@ class AddApiConfig(BaseModel):
     label: str
     api_key: str
     base_url: str
-    model: str
+    models: str
 
 @app.post("/api/configs/add")
 async def add_api_config(new_config: AddApiConfig):
@@ -170,7 +207,7 @@ async def add_api_config(new_config: AddApiConfig):
         label=new_config.label,
         api_key=new_config.api_key,
         base_url=new_config.base_url,
-        model=new_config.model
+        models=new_config.models
     )
     config.configs.append(api_config)
     config.save_config()
@@ -195,6 +232,17 @@ async def switch_api_config(request: SwitchApiConfig):
     config.active_config_id = request.config_id
     config.save_config()
 
+    return {"status": "ok"}
+
+
+class SwitchSessionModel(BaseModel):
+    model_id: str
+
+@app.post("/api/sessions/{session_id}/model")
+async def switch_session_model(session_id: str, request: SwitchSessionModel):
+    session = memory.get_session(session_id)
+    session.model_id = request.model_id
+    memory.save_session(session_id)
     return {"status": "ok"}
 
 class SudoUpdate(BaseModel):

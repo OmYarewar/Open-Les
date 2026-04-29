@@ -32,7 +32,7 @@ class Agent:
                 base_url=api_config.base_url
             )
 
-        return self.clients[cache_key], api_config.model
+        return self.clients[cache_key], api_config.models
 
     async def chat(self, session_id: str, user_message: str):
         # Add user message to memory
@@ -52,7 +52,16 @@ class Agent:
         session.is_cancelled = False
         memory.save_session(session_id)
 
-        client, model = self._get_client(config_id_to_use)
+        client, models_str = self._get_client(config_id_to_use)
+
+        # Determine the exact model to use
+        model = session.model_id
+        if not model and models_str:
+            model = models_str.split(',')[0].strip()
+
+        if not model:
+            model = "gpt-4o-mini" # fallback
+
 
         if not client:
             error_msg = "Error: No API configuration found. Please add an API Key in Settings."
@@ -75,13 +84,81 @@ class Agent:
             current_tools_schema.extend(mcp_manager.get_tool_schemas())
 
             try:
-                # Call LLM
-                response = await client.chat.completions.create(
+                # Call LLM with streaming
+                response_stream = await client.chat.completions.create(
                     model=model,
                     messages=messages,
                     tools=current_tools_schema,
-                    tool_choice="auto"
+                    tool_choice="auto",
+                    stream=True
                 )
+
+                # We need to construct the response message manually from stream chunks
+                full_content = ""
+                tool_calls_dict = {}
+
+                async for chunk in response_stream:
+                    if memory.get_session(session_id).is_cancelled:
+                        break
+
+                    delta = chunk.choices[0].delta
+
+                    if delta.content:
+                        full_content += delta.content
+                        yield {"role": "assistant", "content": full_content}
+
+                    if delta.tool_calls:
+                        for tc in delta.tool_calls:
+                            if tc.index not in tool_calls_dict:
+                                tool_calls_dict[tc.index] = {
+                                    "id": tc.id,
+                                    "type": "function",
+                                    "function": {"name": "", "arguments": ""}
+                                }
+                            if tc.id:
+                                tool_calls_dict[tc.index]["id"] = tc.id
+                            if tc.function:
+                                if tc.function.name:
+                                    tool_calls_dict[tc.index]["function"]["name"] += tc.function.name
+                                if tc.function.arguments:
+                                    tool_calls_dict[tc.index]["function"]["arguments"] += tc.function.arguments
+
+                # Use dictionaries matching Pydantic fields instead of arbitrary dummy classes
+                class _FunctionDict(dict):
+                    @property
+                    def name(self): return self.get("name")
+                    @property
+                    def arguments(self): return self.get("arguments")
+
+                class _ToolCallDict(dict):
+                    @property
+                    def id(self): return self.get("id")
+                    @property
+                    def function(self): return _FunctionDict(self.get("function", {}))
+
+                class _MessageDict(dict):
+                    @property
+                    def content(self): return self.get("content")
+                    @property
+                    def tool_calls(self):
+                        tc = self.get("tool_calls")
+                        if not tc: return None
+                        return [_ToolCallDict(t) for t in tc]
+
+                tool_calls_list = []
+                for idx in sorted(tool_calls_dict.keys()):
+                    tc = tool_calls_dict[idx]
+                    tool_calls_list.append({
+                        "id": tc["id"],
+                        "type": "function",
+                        "function": {"name": tc["function"]["name"], "arguments": tc["function"]["arguments"]}
+                    })
+
+                response_message = _MessageDict({
+                    "content": full_content,
+                    "tool_calls": tool_calls_list if tool_calls_list else None
+                })
+
             except Exception as e:
                 error_msg = f"API Error: {str(e)}"
                 memory.add_message(session_id, Message(role="assistant", content=error_msg))
@@ -92,8 +169,6 @@ class Agent:
             if memory.get_session(session_id).is_cancelled:
                 yield {"role": "assistant", "content": "\n\n*[Execution stopped by user]*"}
                 break
-
-            response_message = response.choices[0].message
             
             # Save assistant message
             assistant_msg = Message(
