@@ -4,6 +4,7 @@ lucide.createIcons();
 // State
 let currentSessionId = 'session_' + Date.now();
 let isGenerating = false;
+let globalConfigs = []; // Store to reference models
 
 // DOM Elements
 const chatMessages = document.getElementById('chat-messages');
@@ -27,6 +28,8 @@ async function loadConfigs() {
         const res = await fetch('/api/configs');
         const data = await res.json();
 
+        globalConfigs = data.configs;
+
         configSwitcher.innerHTML = '';
         data.configs.forEach(c => {
             const opt = document.createElement('option');
@@ -37,9 +40,31 @@ async function loadConfigs() {
 
         if (data.active_config_id) {
             configSwitcher.value = data.active_config_id;
+            updateModelDropdown(data.active_config_id);
         }
     } catch (e) {
         console.error("Failed to load configs:", e);
+    }
+}
+
+const modelSwitcher = document.getElementById('model-switcher');
+
+function updateModelDropdown(configId) {
+    const config = globalConfigs.find(c => c.id === configId);
+    modelSwitcher.innerHTML = '';
+    if (config && config.models) {
+        const models = config.models.split(',').map(m => m.trim()).filter(m => m);
+        models.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = m;
+            modelSwitcher.appendChild(opt);
+        });
+    } else {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No models defined';
+        modelSwitcher.appendChild(opt);
     }
 }
 
@@ -52,6 +77,23 @@ configSwitcher.addEventListener('change', async (e) => {
             session_id: currentSessionId
         })
     });
+    updateModelDropdown(e.target.value);
+    // After switching config, we trigger the model change to sync backend
+    if (modelSwitcher.value) {
+        modelSwitcher.dispatchEvent(new Event('change'));
+    }
+});
+
+modelSwitcher.addEventListener('change', async (e) => {
+    if (e.target.value) {
+        await fetch(`/api/sessions/${currentSessionId}/model`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model_id: e.target.value
+            })
+        });
+    }
 });
 
 btnAddConfig.addEventListener('click', () => {
@@ -80,7 +122,7 @@ btnSaveNewConfig.addEventListener('click', async () => {
     const res = await fetch('/api/configs/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ label, api_key: apiKey, base_url: baseUrl, model })
+        body: JSON.stringify({ label, api_key: apiKey, base_url: baseUrl, models: model })
     });
 
     const data = await res.json();
@@ -243,11 +285,11 @@ chatForm.addEventListener('submit', async (e) => {
                                 msgEl.innerHTML = DOMPurify.sanitize(marked.parse(assistantContent));
                             }
                             if (data.tool_calls) {
-                                let toolHTML = '<details class="mt-2 bg-slate-800 rounded border border-slate-700 text-xs font-mono">';
-                                toolHTML += '<summary class="p-2 cursor-pointer hover:bg-slate-700 text-indigo-400 select-none">Executing Tools (' + data.tool_calls.length + ')</summary>';
+                                let toolHTML = '<details class="mt-2 bg-slate-100 dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-700 text-xs font-mono">';
+                                toolHTML += '<summary class="p-2 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 text-indigo-500 dark:text-indigo-400 select-none">Executing Tools (' + data.tool_calls.length + ')</summary>';
                                 toolHTML += '<div class="p-2 border-t border-slate-700 space-y-1">';
                                 data.tool_calls.forEach(tc => {
-                                    toolHTML += `<div><span class="text-slate-500">${tc.function.name}</span></div>`;
+                                    toolHTML += `<div><span class="text-slate-500 dark:text-slate-500">${tc.function.name}</span></div>`;
                                 });
                                 toolHTML += '</div></details>';
                                 if(!msgEl.innerHTML.includes('Executing Tools')) {
@@ -256,14 +298,14 @@ chatForm.addEventListener('submit', async (e) => {
                             }
                         } else if (data.role === 'tool') {
                             const details = document.createElement('details');
-                            details.className = 'mt-2 bg-slate-900 rounded border border-slate-800 text-xs font-mono';
+                            details.className = 'mt-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 text-xs font-mono';
 
                             const summary = document.createElement('summary');
-                            summary.className = 'p-2 cursor-pointer hover:bg-slate-800 text-slate-400 select-none';
+                            summary.className = 'p-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-600 dark:text-slate-400 select-none';
                             summary.textContent = 'Tool Output: ' + (data.name || 'Unknown');
 
                             const toolContent = document.createElement('div');
-                            toolContent.className = 'p-2 border-t border-slate-800 text-slate-400 overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap';
+                            toolContent.className = 'p-2 border-t border-slate-800 text-slate-600 dark:text-slate-400 overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap';
                             toolContent.textContent = data.content;
 
                             details.appendChild(summary);
@@ -285,6 +327,10 @@ chatForm.addEventListener('submit', async (e) => {
     } finally {
         isGenerating = false;
         chatInput.disabled = false;
+        btnSendChat.classList.remove('hidden');
+        btnStopChat.classList.add('hidden');
+        aiStatusIndicator.classList.add('hidden');
+        aiStatusIndicator.classList.remove('flex');
         chatInput.focus();
     }
 });
@@ -314,10 +360,10 @@ function appendMessage(role, content, id = null) {
             </div>
         `;
     } else {
-        msgClass = 'bg-dark-panel border border-dark-border text-slate-200 rounded-2xl rounded-tl-sm';
+        msgClass = 'bg-white dark:bg-dark-panel border border-slate-200 dark:border-dark-border text-slate-800 dark:text-slate-200 rounded-2xl rounded-tl-sm';
         wrapper.innerHTML = `
-            <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0 border border-slate-600">
-                <i data-lucide="bot" class="w-4 h-4 text-slate-300"></i>
+            <div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center shrink-0 border border-slate-600">
+                <i data-lucide="bot" class="w-4 h-4 text-slate-600 dark:text-slate-300"></i>
             </div>
             <div class="max-w-[80%] ${msgClass} p-4 shadow-sm w-full">
                 <div ${innerId} class="prose prose-invert max-w-none text-sm">${content ? DOMPurify.sanitize(marked.parse(content)) : '<span class="animate-pulse flex items-center h-4"><span class="w-2 h-2 bg-slate-500 rounded-full mr-1"></span><span class="w-2 h-2 bg-slate-500 rounded-full mr-1"></span><span class="w-2 h-2 bg-slate-500 rounded-full"></span></span>'}</div>
@@ -335,7 +381,7 @@ function appendMessage(role, content, id = null) {
 btnNewChat.addEventListener('click', () => {
     currentSessionId = 'session_' + Date.now();
     chatMessages.innerHTML = `
-        <div class="flex justify-center items-center h-full text-slate-500">
+        <div class="flex justify-center items-center h-full text-slate-500 dark:text-slate-500">
             <div class="text-center">
                 <i data-lucide="bot" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
                 <p>New Session Started.</p>
@@ -396,7 +442,7 @@ btnSettings.addEventListener('click', async () => {
     
     document.getElementById('config-base-url').value = config.base_url;
     document.getElementById('config-api-key').value = config.api_key;
-    document.getElementById('config-model').value = config.model;
+    document.getElementById('config-model').value = config.models || '';
     document.getElementById('config-system-prompt').value = config.system_prompt;
     document.getElementById('config-workspace-dir').value = config.workspace_dir;
     document.getElementById('config-mcp-str').value = config.mcp_config_str;
@@ -420,7 +466,7 @@ btnSaveSettings.addEventListener('click', async () => {
         body: JSON.stringify({
             base_url: document.getElementById('config-base-url').value,
             api_key: document.getElementById('config-api-key').value,
-            model: document.getElementById('config-model').value,
+            models: document.getElementById('config-model').value,
             system_prompt: document.getElementById('config-system-prompt').value,
             workspace_dir: document.getElementById('config-workspace-dir').value,
             mcp_config_str: document.getElementById('config-mcp-str').value,
@@ -446,7 +492,7 @@ async function loadSessions() {
         sessionList.innerHTML = '';
         data.sessions.forEach(session => {
             const btn = document.createElement('button');
-            btn.className = `w-full text-left p-2 rounded hover:bg-slate-700 transition-colors truncate text-sm ${session.id === currentSessionId ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'}`;
+            btn.className = `w-full text-left p-2 rounded hover:bg-slate-700 transition-colors truncate text-sm ${session.id === currentSessionId ? 'bg-slate-700 text-white' : 'text-slate-600 dark:text-slate-400 hover:text-slate-200'}`;
             btn.innerHTML = `<i data-lucide="message-square" class="w-4 h-4 inline-block mr-2 opacity-70"></i> ${session.title}`;
             btn.onclick = () => loadSession(session.id);
             sessionList.appendChild(btn);
@@ -467,6 +513,13 @@ async function loadSession(sessionId) {
 
         if (data.config_id) {
             configSwitcher.value = data.config_id;
+            updateModelDropdown(data.config_id);
+        } else {
+            updateModelDropdown(configSwitcher.value);
+        }
+
+        if (data.model_id) {
+            modelSwitcher.value = data.model_id;
         }
 
         if (data.history && data.history.length > 0) {
@@ -483,11 +536,11 @@ async function loadSession(sessionId) {
                          // Find the last added assistant message to append tool details
                          const lastMsgContent = chatMessages.lastElementChild.querySelector('.prose');
                          if(lastMsgContent) {
-                             let toolHTML = '<details class="mt-2 bg-slate-800 rounded border border-slate-700 text-xs font-mono">';
-                             toolHTML += '<summary class="p-2 cursor-pointer hover:bg-slate-700 text-indigo-400 select-none">Executing Tools (' + msg.tool_calls.length + ')</summary>';
+                             let toolHTML = '<details class="mt-2 bg-slate-100 dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-700 text-xs font-mono">';
+                             toolHTML += '<summary class="p-2 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 text-indigo-500 dark:text-indigo-400 select-none">Executing Tools (' + msg.tool_calls.length + ')</summary>';
                              toolHTML += '<div class="p-2 border-t border-slate-700 space-y-1">';
                              msg.tool_calls.forEach(tc => {
-                                 toolHTML += `<div><span class="text-slate-500">${tc.function.name}</span></div>`;
+                                 toolHTML += `<div><span class="text-slate-500 dark:text-slate-500">${tc.function.name}</span></div>`;
                              });
                              toolHTML += '</div></details>';
                              lastMsgContent.innerHTML += DOMPurify.sanitize(toolHTML, {ADD_TAGS: ['details', 'summary']});
@@ -497,14 +550,14 @@ async function loadSession(sessionId) {
                      const lastMsgContent = chatMessages.lastElementChild.querySelector('.prose');
                      if(lastMsgContent) {
                          const details = document.createElement('details');
-                         details.className = 'mt-2 bg-slate-900 rounded border border-slate-800 text-xs font-mono';
+                         details.className = 'mt-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 text-xs font-mono';
 
                          const summary = document.createElement('summary');
-                         summary.className = 'p-2 cursor-pointer hover:bg-slate-800 text-slate-400 select-none';
+                         summary.className = 'p-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-600 dark:text-slate-400 select-none';
                          summary.textContent = 'Tool Output: ' + (msg.name || 'Unknown');
 
                          const toolContent = document.createElement('div');
-                         toolContent.className = 'p-2 border-t border-slate-800 text-slate-400 overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap';
+                         toolContent.className = 'p-2 border-t border-slate-800 text-slate-600 dark:text-slate-400 overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap';
                          toolContent.textContent = msg.content;
 
                          details.appendChild(summary);
@@ -515,7 +568,7 @@ async function loadSession(sessionId) {
             });
         } else {
              chatMessages.innerHTML = `
-                <div class="flex justify-center items-center h-full text-slate-500">
+                <div class="flex justify-center items-center h-full text-slate-500 dark:text-slate-500">
                     <div class="text-center">
                         <i data-lucide="bot" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
                         <p>Empty Session.</p>
@@ -561,11 +614,11 @@ settingsTabBtns.forEach(btn => {
         // Remove active styling from all buttons
         settingsTabBtns.forEach(b => {
             b.classList.remove('bg-indigo-600', 'text-white');
-            b.classList.add('hover:bg-slate-700', 'text-slate-400');
+            b.classList.add('hover:bg-slate-700', 'text-slate-600 dark:text-slate-400');
         });
         // Add active styling to clicked button
         btn.classList.add('bg-indigo-600', 'text-white');
-        btn.classList.remove('hover:bg-slate-700', 'text-slate-400');
+        btn.classList.remove('hover:bg-slate-700', 'text-slate-600 dark:text-slate-400');
 
         // Hide all tabs
         settingsTabs.forEach(tab => tab.classList.add('hidden'));

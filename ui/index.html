@@ -25,34 +25,40 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="bg-dark-bg text-slate-200 h-screen flex flex-col font-sans overflow-hidden">
+<body class="bg-slate-50 dark:bg-dark-bg text-slate-800 dark:text-slate-200 h-screen flex flex-col font-sans overflow-hidden">
     
     <!-- Top Navigation -->
-    <header class="bg-dark-panel border-b border-dark-border h-14 flex items-center justify-between px-4 shrink-0">
+    <header class="bg-white dark:bg-dark-panel border-b border-slate-200 dark:border-dark-border h-14 flex items-center justify-between px-4 shrink-0">
         <div class="flex items-center gap-2 text-indigo-400 font-bold text-lg">
             <i data-lucide="cpu"></i> AI Harness
         </div>
         <div class="flex items-center gap-4">
-            <div class="relative flex items-center gap-1 bg-slate-800/50 rounded-md px-2 py-1.5 border border-dark-border">
-                <select id="config-switcher" class="bg-transparent text-sm text-slate-300 focus:outline-none appearance-none pr-4 cursor-pointer max-w-[150px] truncate">
+            <div class="relative flex items-center gap-1 bg-slate-100 dark:bg-slate-800/50 rounded-md px-2 py-1.5 border border-slate-200 dark:border-dark-border">
+                <select id="config-switcher" class="bg-transparent text-sm text-slate-700 dark:text-slate-300 focus:outline-none appearance-none pr-4 cursor-pointer max-w-[150px] truncate">
                     <option value="">Loading...</option>
                 </select>
                 <i data-lucide="chevron-down" class="w-3 h-3 text-slate-500 absolute right-2 pointer-events-none"></i>
-                <button id="btn-add-config" class="ml-1 p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors" title="Add New API Config">
+                <button id="btn-add-config" class="ml-1 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-400 hover:text-white transition-colors" title="Add New API Config">
                     <i data-lucide="plus" class="w-3 h-3"></i>
                 </button>
+            </div>
+            <div class="relative flex items-center gap-1 bg-slate-100 dark:bg-slate-800/50 rounded-md px-2 py-1.5 border border-slate-200 dark:border-dark-border">
+                <select id="model-switcher" class="bg-transparent text-sm text-slate-700 dark:text-slate-300 focus:outline-none appearance-none pr-4 cursor-pointer max-w-[150px] truncate" title="Switch Model for Session">
+                    <option value="">Select Config First...</option>
+                </select>
+                <i data-lucide="chevron-down" class="w-3 h-3 text-slate-500 absolute right-2 pointer-events-none"></i>
             </div>
             <button id="btn-sudo" class="p-2 bg-red-600/20 hover:bg-red-600/40 rounded-md transition-all hover:scale-105 active:scale-95 text-red-400 font-semibold text-sm flex gap-2 items-center" title="Sudo Access">
                 <i data-lucide="shield"></i> Sudo
             </button>
-            <button id="btn-upload-skill" class="p-2 hover:bg-slate-700 rounded-md transition-all hover:scale-105 active:scale-95 text-slate-400 hover:text-white" title="Upload Skill (.zip)">
+            <button id="btn-upload-skill" class="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-all hover:scale-105 active:scale-95 text-slate-600 dark:text-slate-400 hover:text-white" title="Upload Skill (.zip)">
                 <i data-lucide="upload"></i>
             </button>
             <input type="file" id="file-upload-skill" accept=".zip" class="hidden">
-            <button id="btn-theme-toggle" class="p-2 hover:bg-slate-700 rounded-md transition-all hover:scale-105 active:scale-95 text-slate-400 hover:text-white" title="Toggle Theme">
+            <button id="btn-theme-toggle" class="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-all hover:scale-105 active:scale-95 text-slate-600 dark:text-slate-400 hover:text-white" title="Toggle Theme">
                 <i data-lucide="moon" id="icon-theme"></i>
             </button>
-            <button id="btn-settings" class="p-2 hover:bg-slate-700 rounded-md transition-all hover:scale-105 active:scale-95 text-slate-400 hover:text-white" title="Settings">
+            <button id="btn-settings" class="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-all hover:scale-105 active:scale-95 text-slate-600 dark:text-slate-400 hover:text-white" title="Settings">
                 <i data-lucide="settings"></i>
             </button>
         </div>
@@ -62,8 +68,8 @@
     <main class="flex-1 flex overflow-hidden">
         
         <!-- Sidebar: Sessions -->
-        <aside class="w-64 bg-dark-panel border-r border-dark-border flex flex-col hidden sm:flex shrink-0">
-            <div class="p-3 border-b border-dark-border">
+        <aside class="w-64 bg-white dark:bg-dark-panel border-r border-slate-200 dark:border-dark-border flex flex-col hidden sm:flex shrink-0">
+            <div class="p-3 border-b border-slate-200 dark:border-dark-border">
                 <button id="btn-new-chat" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 px-4 rounded flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95">
                     <i data-lucide="plus" class="w-4 h-4"></i> New Chat
                 </button>
@@ -87,7 +93,7 @@
 
             <!-- Input Area -->
             <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-dark-bg via-dark-bg to-transparent">
-                <form id="chat-form" class="max-w-4xl mx-auto relative bg-dark-panel border border-dark-border rounded-xl shadow-lg focus-within:border-indigo-500 transition-colors">
+                <form id="chat-form" class="max-w-4xl mx-auto relative bg-white dark:bg-dark-panel border border-slate-200 dark:border-dark-border rounded-xl shadow-lg focus-within:border-indigo-500 transition-colors">
                     <textarea id="chat-input" rows="1" class="w-full bg-transparent text-white p-4 pr-12 focus:outline-none resize-none max-h-32 rounded-xl" placeholder="Send a message..." required></textarea>
                     <div class="absolute bottom-3 right-3 flex items-center gap-2">
                         <!-- Status Indicator -->
@@ -108,113 +114,113 @@
     </main>
 
     <!-- Sudo Password Modal -->
-    <div id="sudo-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 backdrop-blur-sm">
-        <div class="bg-dark-panel border border-red-500/50 rounded-xl shadow-2xl w-full max-w-sm mx-4 flex flex-col">
-            <div class="flex items-center justify-between p-4 border-b border-dark-border">
+    <div id="sudo-modal" class="fixed inset-0 bg-slate-900/50 dark:bg-black/50 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white dark:bg-dark-panel border border-red-500/50 rounded-xl shadow-2xl w-full max-w-sm mx-4 flex flex-col">
+            <div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-dark-border">
                 <h2 class="text-lg font-semibold flex items-center gap-2 text-red-400"><i data-lucide="shield-alert"></i> Root Access</h2>
-                <button id="btn-close-sudo" class="text-slate-400 hover:text-white"><i data-lucide="x"></i></button>
+                <button id="btn-close-sudo" class="text-slate-600 dark:text-slate-400 hover:text-white"><i data-lucide="x"></i></button>
             </div>
             <div class="p-6">
-                <label class="block text-sm font-medium text-slate-400 mb-1">Sudo Password (One time setup)</label>
-                <input type="password" id="input-sudo-password" class="w-full bg-slate-800 border border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-red-500" placeholder="Enter password to give AI root access">
+                <label class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Sudo Password (One time setup)</label>
+                <input type="password" id="input-sudo-password" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-red-500" placeholder="Enter password to give AI root access">
             </div>
-            <div class="p-4 border-t border-dark-border flex justify-end gap-2">
+            <div class="p-4 border-t border-slate-200 dark:border-dark-border flex justify-end gap-2">
                 <button id="btn-save-sudo" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded transition-colors">Grant Sudo Access</button>
             </div>
         </div>
     </div>
 
     <!-- Add API Config Modal -->
-    <div id="add-config-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 backdrop-blur-sm">
-        <div class="bg-dark-panel border border-dark-border rounded-xl shadow-2xl w-full max-w-md mx-4 flex flex-col">
-            <div class="flex items-center justify-between p-4 border-b border-dark-border">
+    <div id="add-config-modal" class="fixed inset-0 bg-slate-900/50 dark:bg-black/50 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white dark:bg-dark-panel border border-slate-200 dark:border-dark-border rounded-xl shadow-2xl w-full max-w-md mx-4 flex flex-col">
+            <div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-dark-border">
                 <h2 class="text-lg font-semibold flex items-center gap-2 text-indigo-400"><i data-lucide="plus-circle"></i> Add API Configuration</h2>
-                <button id="btn-close-add-config" class="text-slate-400 hover:text-white"><i data-lucide="x"></i></button>
+                <button id="btn-close-add-config" class="text-slate-600 dark:text-slate-400 hover:text-white"><i data-lucide="x"></i></button>
             </div>
             <div class="p-6 space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-400 mb-1">Nickname / Label</label>
-                    <input type="text" id="new-config-label" class="w-full bg-slate-800 border border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="e.g. OpenAI GPT-4, Local LMStudio">
+                    <label class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Nickname / Label</label>
+                    <input type="text" id="new-config-label" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="e.g. OpenAI GPT-4, Local LMStudio">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-400 mb-1">API Key</label>
-                    <input type="password" id="new-config-api-key" class="w-full bg-slate-800 border border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="sk-...">
+                    <label class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">API Key</label>
+                    <input type="password" id="new-config-api-key" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="sk-...">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-400 mb-1">Base URL</label>
-                    <input type="text" id="new-config-base-url" class="w-full bg-slate-800 border border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="https://api.openai.com/v1" value="https://api.openai.com/v1">
+                    <label class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Base URL</label>
+                    <input type="text" id="new-config-base-url" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="https://api.openai.com/v1" value="https://api.openai.com/v1">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-400 mb-1">Model ID</label>
-                    <input type="text" id="new-config-model" class="w-full bg-slate-800 border border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="gpt-4o-mini" value="gpt-4o-mini">
+                    <label class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Model IDs (comma-separated)</label>
+                    <input type="text" id="new-config-model" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="gpt-4o-mini, claude-3-haiku" value="gpt-4o-mini">
                 </div>
             </div>
-            <div class="p-4 border-t border-dark-border flex justify-end gap-2">
+            <div class="p-4 border-t border-slate-200 dark:border-dark-border flex justify-end gap-2">
                 <button id="btn-save-new-config" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded transition-colors">Save Configuration</button>
             </div>
         </div>
     </div>
 
     <!-- Settings Modal -->
-    <div id="settings-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 backdrop-blur-sm">
-        <div class="bg-dark-panel border border-dark-border rounded-xl shadow-2xl w-full max-w-3xl h-[80vh] mx-4 flex flex-col">
-            <div class="flex items-center justify-between p-4 border-b border-dark-border shrink-0">
+    <div id="settings-modal" class="fixed inset-0 bg-slate-900/50 dark:bg-black/50 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white dark:bg-dark-panel border border-slate-200 dark:border-dark-border rounded-xl shadow-2xl w-full max-w-3xl h-[80vh] mx-4 flex flex-col">
+            <div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-dark-border shrink-0">
                 <h2 class="text-xl font-semibold flex items-center gap-2"><i data-lucide="sliders"></i> Settings</h2>
-                <button id="btn-close-settings" class="text-slate-400 hover:text-white"><i data-lucide="x"></i></button>
+                <button id="btn-close-settings" class="text-slate-600 dark:text-slate-400 hover:text-white"><i data-lucide="x"></i></button>
             </div>
 
             <div class="flex flex-1 overflow-hidden">
                 <!-- Settings Tabs Sidebar -->
-                <div class="w-48 border-r border-dark-border bg-slate-800/50 p-2 flex flex-col gap-1">
+                <div class="w-48 border-r border-slate-200 dark:border-dark-border bg-slate-100 dark:bg-slate-800/50 p-2 flex flex-col gap-1">
                     <button class="settings-tab-btn w-full text-left p-2 rounded bg-indigo-600 text-white font-medium" data-target="tab-general">General</button>
-                    <button class="settings-tab-btn w-full text-left p-2 rounded hover:bg-slate-700 text-slate-400 font-medium" data-target="tab-mcp">MCP Servers</button>
-                    <button class="settings-tab-btn w-full text-left p-2 rounded hover:bg-slate-700 text-slate-400 font-medium" data-target="tab-skills">Skills Config</button>
+                    <button class="settings-tab-btn w-full text-left p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 font-medium" data-target="tab-mcp">MCP Servers</button>
+                    <button class="settings-tab-btn w-full text-left p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 font-medium" data-target="tab-skills">Skills Config</button>
                 </div>
 
                 <!-- Settings Content -->
                 <div class="flex-1 p-6 overflow-y-auto">
                     <!-- General Tab -->
                     <div id="tab-general" class="settings-tab block space-y-4">
-                        <h3 class="text-lg font-medium text-slate-200 mb-4 border-b border-slate-700 pb-2">General Config</h3>
+                        <h3 class="text-lg font-medium text-slate-800 dark:text-slate-200 mb-4 border-b border-slate-700 pb-2">General Config</h3>
                         <div>
-                            <label class="block text-sm font-medium text-slate-400 mb-1">Base URL</label>
-                            <input type="text" id="config-base-url" class="w-full bg-slate-800 border border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                            <label class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Base URL</label>
+                            <input type="text" id="config-base-url" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-400 mb-1">API Key</label>
-                            <input type="password" id="config-api-key" class="w-full bg-slate-800 border border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                            <label class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">API Key</label>
+                            <input type="password" id="config-api-key" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-400 mb-1">Model ID</label>
-                            <input type="text" id="config-model" class="w-full bg-slate-800 border border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                            <label class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Model IDs (comma-separated)</label>
+                            <input type="text" id="config-model" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="gpt-4o-mini, gpt-4">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-400 mb-1">Workspace Directory</label>
-                            <input type="text" id="config-workspace-dir" class="w-full bg-slate-800 border border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="/path/to/workspace">
+                            <label class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Workspace Directory</label>
+                            <input type="text" id="config-workspace-dir" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="/path/to/workspace">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-400 mb-1">System Prompt</label>
-                            <textarea id="config-system-prompt" rows="6" class="w-full bg-slate-800 border border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500"></textarea>
+                            <label class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">System Prompt</label>
+                            <textarea id="config-system-prompt" rows="6" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-dark-border rounded px-3 py-2 text-white focus:outline-none focus:border-indigo-500"></textarea>
                         </div>
                     </div>
 
                     <!-- MCP Servers Tab -->
                     <div id="tab-mcp" class="settings-tab hidden space-y-4 h-full flex flex-col">
-                        <h3 class="text-lg font-medium text-slate-200 mb-2 border-b border-slate-700 pb-2">MCP Servers (JSON)</h3>
-                        <p class="text-xs text-slate-400 mb-2">Configure Model Context Protocol servers to provide dynamic tools to the AI.</p>
-                        <textarea id="config-mcp-str" class="flex-1 w-full bg-slate-800 border border-dark-border rounded px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+                        <h3 class="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2 border-b border-slate-700 pb-2">MCP Servers (JSON)</h3>
+                        <p class="text-xs text-slate-600 dark:text-slate-400 mb-2">Configure Model Context Protocol servers to provide dynamic tools to the AI.</p>
+                        <textarea id="config-mcp-str" class="flex-1 w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-dark-border rounded px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-indigo-500 resize-none"></textarea>
                     </div>
 
                     <!-- Skills Tab -->
                     <div id="tab-skills" class="settings-tab hidden space-y-4 h-full flex flex-col">
-                        <h3 class="text-lg font-medium text-slate-200 mb-2 border-b border-slate-700 pb-2">Skills (JSON)</h3>
-                        <p class="text-xs text-slate-400 mb-2">Configure specific skills or context to be loaded.</p>
-                        <textarea id="config-skills-str" class="flex-1 w-full bg-slate-800 border border-dark-border rounded px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+                        <h3 class="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2 border-b border-slate-700 pb-2">Skills (JSON)</h3>
+                        <p class="text-xs text-slate-600 dark:text-slate-400 mb-2">Configure specific skills or context to be loaded.</p>
+                        <textarea id="config-skills-str" class="flex-1 w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-dark-border rounded px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-indigo-500 resize-none"></textarea>
                     </div>
                 </div>
             </div>
 
-            <div class="p-4 border-t border-dark-border flex justify-end gap-2 shrink-0">
+            <div class="p-4 border-t border-slate-200 dark:border-dark-border flex justify-end gap-2 shrink-0">
                 <button id="btn-save-settings" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded transition-colors font-medium">Save Configurations</button>
             </div>
         </div>

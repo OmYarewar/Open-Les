@@ -21,7 +21,7 @@ class ApiConfig(BaseModel):
     label: str = "Default"
     api_key: str = ""
     base_url: str = "https://api.openai.com/v1"
-    model: str = "gpt-4o-mini"
+    models: str = "gpt-4o-mini"
 
 class AppConfig(BaseModel):
     # Backwards compatible properties, will map to configs list
@@ -52,15 +52,15 @@ class AppConfig(BaseModel):
             active.base_url = value
 
     @property
-    def model(self) -> str:
+    def models(self) -> str:
         active = self.get_active_config()
-        return active.model if active else os.getenv("MODEL_ID", "gpt-4o-mini")
+        return active.models if active else os.getenv("MODEL_ID", "gpt-4o-mini")
 
-    @model.setter
-    def model(self, value: str):
+    @models.setter
+    def models(self, value: str):
         active = self.get_active_config()
         if active:
-            active.model = value
+            active.models = value
 
     system_prompt: str = Field(default="You are a world-class AI harness agent. You have the power to do anything in the user's system via terminal access. You should assist the user using the available tools, including self-optimization using the Meta-Harness methodology.")
 
@@ -80,7 +80,7 @@ class AppConfig(BaseModel):
                 label="Default",
                 api_key=os.getenv("OPENAI_API_KEY", ""),
                 base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
-                model=os.getenv("MODEL_ID", "gpt-4o-mini")
+                models=os.getenv("MODEL_ID", "gpt-4o-mini")
             ))
         if not self.active_config_id:
             self.active_config_id = self.configs[0].id
@@ -114,19 +114,26 @@ class AppConfig(BaseModel):
                             label="Default (Migrated)",
                             api_key=data.get("api_key", ""),
                             base_url=data.get("base_url", "https://api.openai.com/v1"),
-                            model=data.get("model", "gpt-4o-mini")
+                            models=data.get("model", data.get("models", "gpt-4o-mini"))
                         )
                         self.configs = [migrated_config]
                         self.active_config_id = migrated_config.id
 
                     for key, value in data.items():
                         # Skip old legacy fields
-                        if key in ["api_key", "base_url", "model"] and "configs" not in data:
+                        if key in ["api_key", "base_url", "model", "models"] and "configs" not in data:
                             continue
                         if hasattr(self, key):
                             try:
                                 if key == "configs":
-                                    self.configs = [ApiConfig(**c) if isinstance(c, dict) else c for c in value]
+                                    self.configs = []
+                                    for c in value:
+                                        if isinstance(c, dict):
+                                            if "model" in c and "models" not in c:
+                                                c["models"] = c.pop("model")
+                                            self.configs.append(ApiConfig(**c))
+                                        else:
+                                            self.configs.append(c)
                                 else:
                                     setattr(self, key, value)
                             except Exception as e:
