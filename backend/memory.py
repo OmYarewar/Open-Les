@@ -26,7 +26,9 @@ class MemoryManager:
         self.load()
 
     def _get_file_path(self, session_id: str) -> str:
-        return os.path.join(self.storage_dir, f"{session_id}.json")
+        # Sanitize session_id to prevent path traversal
+        safe_session_id = os.path.basename(session_id)
+        return os.path.join(self.storage_dir, f"{safe_session_id}.json")
 
     def load(self):
         # Backwards compatibility: check for old monolithic memory.json

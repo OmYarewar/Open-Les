@@ -23,12 +23,18 @@ def benchmark_performance() -> str:
     except Exception as e:
         return f"Error benchmarking performance: {e}"
 
+def _get_safe_path(base_dir: str, path: str) -> str:
+    """Resolves a path and ensures it stays within the base_dir."""
+    abs_base = os.path.abspath(base_dir)
+    abs_requested = os.path.abspath(os.path.join(abs_base, path))
+    if os.path.commonpath([abs_base, abs_requested]) != abs_base:
+        raise ValueError(f"Access denied: {path} is outside of {base_dir}")
+    return abs_requested
+
 def read_file(filepath: str) -> str:
     """Reads the content of a file."""
     try:
-        path = filepath
-        if not os.path.isabs(path):
-             path = os.path.join(config.workspace_dir, path)
+        path = _get_safe_path(config.workspace_dir, filepath)
         with open(path, 'r') as f:
             return f.read()
     except Exception as e:
@@ -37,9 +43,7 @@ def read_file(filepath: str) -> str:
 def write_file(filepath: str, content: str) -> str:
     """Writes content to a file."""
     try:
-        path = filepath
-        if not os.path.isabs(path):
-             path = os.path.join(config.workspace_dir, path)
+        path = _get_safe_path(config.workspace_dir, filepath)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, 'w') as f:
             f.write(content)
@@ -148,9 +152,7 @@ def get_recent_ai_papers() -> str:
 def install_skill(zip_filepath: str) -> str:
     """Unzips a provided .zip file into a skills/ directory within the workspace."""
     try:
-        path = zip_filepath
-        if not os.path.isabs(path):
-            path = os.path.join(config.workspace_dir, path)
+        path = _get_safe_path(config.workspace_dir, zip_filepath)
 
         skills_dir = os.path.join(config.workspace_dir, "skills")
         os.makedirs(skills_dir, exist_ok=True)
