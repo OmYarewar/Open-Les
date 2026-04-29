@@ -266,15 +266,20 @@ async def upload_skill(file: UploadFile = File(...)):
     zip_path = os.path.join(config.workspace_dir, safe_filename)
 
     try:
-        with open(zip_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        def save_and_install():
+            with open(zip_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
 
-        # Use our existing tool logic to extract
-        from .tools import install_skill
-        result = install_skill(zip_path)
+            # Use our existing tool logic to extract
+            from .tools import install_skill
+            result = install_skill(zip_path)
 
-        # Clean up the zip file
-        os.remove(zip_path)
+            # Clean up the zip file
+            os.remove(zip_path)
+            return result
+
+        # Offload synchronous File IO and extraction to a background thread to avoid blocking the event loop
+        result = await asyncio.to_thread(save_and_install)
 
         return {"status": "ok", "message": result}
     except Exception as e:
