@@ -13,3 +13,7 @@
 ## 2026-04-27 - Security vs Formatting with DOMPurify
 **Learning:** Using `DOMPurify.sanitize` is necessary to prevent XSS vulnerabilities, particularly from dynamically parsed user input or third-party interactions. However, when formatting complex internal tool structures manually via HTML (e.g. `<details>` and `<summary>`), `DOMPurify` might strip out tags if they are not explicitly permitted via `ADD_TAGS`, breaking intended UI structures.
 **Action:** Always ensure that when manually building safe internal HTML structures using semantic tags, you pass `ADD_TAGS` arrays to `DOMPurify` (e.g. `{ADD_TAGS: ['details', 'summary']}`) to preserve functional layouts without compromising security against malicious payloads.
+
+## 2024-06-01 - Event Loop Blocking via Synchronous File I/O
+**Learning:** Performing synchronous File I/O (like `shutil.copyfileobj` or ZIP extraction) directly within an `async def` FastAPI route blocks the entire application's event loop. This prevents the server from processing other concurrent requests, leading to significant latency spikes for all users until the I/O operation completes.
+**Action:** Always offload synchronous, blocking operations to a background thread using `await asyncio.to_thread()` when working within an asynchronous context. This ensures the event loop remains free to handle other incoming requests and maintains high application responsiveness.
